@@ -1,0 +1,400 @@
+---
+title: "CIND119 PROJECT"
+date: "9/21/2020"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Data Description
+
+Includes Descriptive statistics of the working dataset,
+number of attributes, correlation between attributes, interesting trends
+(such as outliers and possible reasons), etc.
+
+
+```{r include=FALSE}
+library(ggplot2)
+#library(plyr) // for revalue() function
+library(dplyr)
+
+
+GermanCredit <-read.csv("C:\\Users\\MORI FIHRI\\Documents\\R\\german_credit_Modif.csv")
+
+
+```
+
+The data contains 1000 observations, 20 independent variables and 1 dependent outcome variable (the class attribute:Creditability). Variable descriptions can be referenced in the project description file.
+
+
+Below is the structure build of the dataset (NOTE: Some data types are transformed in Weka):
+
+
+
+```{r}
+df <- data.frame(GermanCredit)
+str(df)
+```
+
+Below is the summary of the dataset:
+
+
+```{r}
+
+summary(GermanCredit)
+
+Creditability.score <- GermanCredit$Creditability
+
+# Convert factor to character
+Creditability.score_char <- as.character(Creditability.score)
+
+# Recode character to numeric
+Creditability.score_int <- dplyr::recode(Creditability.score_char, Good = 1, Bad = 0)
+```
+
+# UNIVARIATE ANALYSIS
+
+Some plots are presented to summarise each of the variables. Some quick graph information:
+
+- The frequency by credit risk shows that the majority of applicants (700/70%) did not present any risk while 300 (30%) constituted a risk:
+
+```{r message=FALSE}
+
+GermanCredit %>%group_by(Creditability)%>%summarise(n=n())%>%
+	ggplot(aes(x=Creditability,y=n,fill=Creditability))+geom_bar(stat = "identity")+
+	ggtitle("Number of observations by Creditability")+theme_bw()
+
+
+```
+
+- The frequency by gender and marital status shows that the majority of borrowers are single     males(548/54.8%), followed by females who were or are in a marital relationship(310/31%):
+
+```{r}
+GermanCredit %>%group_by(Sex...Marital.Status)%>%summarise(n=n())%>%
+	ggplot(aes(x=Sex...Marital.Status,y=n,fill=Sex...Marital.Status))+geom_bar(stat = "identity")+
+	ggtitle("Number of observations by Gender and Marital Status")+theme_bw()+coord_flip()
+
+# MaritalStatus <- df$Sex...Marital.Status
+# table(MaritalStatus,useNA='always') // check for missing values
+
+```
+	
+
+- The relative frequency by credit amount shows that the majority of borrowers applied for up to  5000 DM. While only a minority applied for a credit amount of more than 5000 DM:
+
+```{r message=FALSE}
+  # create relative frequency histogram for credit amount
+  df <- data.frame(GermanCredit)
+  Credit_Amount <- df$Credit.Amount
+  ggplot(df, aes(x = Credit.Amount)) + 
+  geom_histogram(aes(y = after_stat(count / sum(count))), color="black", fill="red", bins = 10) +
+  scale_x_continuous(name = "Credit Amount", breaks = seq(250, 18500, by=1825)) +
+  ggtitle("Credit Amount Distribution") + 
+   scale_y_continuous(labels = scales::percent)
+  
+
+``` 
+
+
+Credit values range between 250 DM and 18424 DM.
+
+
+ 
+  Mean of Credit Amount applied for: 3271.248
+ 
+  sdv of Credit Amount applied for:  2822.752  // High Standard deviation
+
+We notice some potential outliers in the credit amount values mainly detected via IQR criterion in the boxplot: 
+
+
+```{r}
+#   mean(df$Credit.Amount)
+# min(df$Credit.Amount)
+# max(df$Credit.Amount)
+# sd(df$Credit.Amount)
+#   summary(df$Credit.Amount)
+# range(df$Credit.Amount)
+# head(df$Credit.Amount, n=200)
+
+# create a frequency histogram using R base
+# hist(df$Credit.Amount, xlab = "Credit Amount", main = "Histogram of Credit Amount",
+#   breaks = sqrt(nrow(df))) # set number of bins
+
+# create a frequency histogram using ggplot.
+# ggplot(df) + aes(x = Credit.Amount) + geom_histogram(bins = 30L, fill =
+# "#0c4c8a") + theme_minimal()
+ 
+# Create a boxplot using R base:
+# boxplot(df$Credit.Amount, ylab = "Credit Amount")
+
+# Create a boxplot using ggplot:
+ggplot(df) + aes(x = "", y = Credit.Amount) + geom_boxplot(fill = "#0c4c8a") + theme_minimal()
+
+```
+
+Since the tests we are going to apply are robust to the presence of outliers, we decided to keep them. This is reinforced by the context of our analysis as well as the fact these points are not extremely distant from other observations.
+
+
+Below are the outlier values for the credit amount applied for:
+
+```{r}
+# extract the values of the potential outliers based on the IQR criterion
+boxplot.stats(df$Credit.Amount)$out
+```
+
+And these are their respective rows in the data frame:
+
+```{r}
+# extract the row number corresponding to these outliers:
+out <- boxplot.stats(df$Credit.Amount)$out
+out_ind <- which(df$Credit.Amount %in% c(out))
+out_ind
+
+# View((df$Credit.Amount))
+
+```
+
+- The relative frequency by duration of credit(month) shows that the majority of borrowers do not keep their balance for long (threshold of approximately 26 months). The average duration is approximately 18 months:
+
+```{r}
+  # create relative frequency histogram for duration of credit
+  df <- data.frame(GermanCredit)
+  ggplot(df, aes(x = Duration.of.Credit..month.)) + 
+  geom_histogram(aes(y = after_stat(count / sum(count))), color="black", fill="red", bins = 10) +
+  scale_x_continuous(name = "Duration of Credit", breaks = seq(0, 80, 10)) + 
+  ggtitle("Duration of Credit Distribution") + 
+   scale_y_continuous(labels = scales::percent)
+  
+#   mean(df$Duration.of.Credit..month.)
+# min(df$Duration.of.Credit..month.)
+# max(df$Duration.of.Credit..month.)
+# sd(df$Duration.of.Credit..month.)
+#   summary(df$Duration.of.Credit..month.)
+# range(df$Duration.of.Credit..month.)
+# head(df$Duration.of.Credit..month., n=200)
+  
+``` 
+
+
+
+Credit duration values range between 4 and 72 months.
+
+
+ 
+  Mean of Credit Duration: 21
+ 
+  sdv of Credit Duration: 12  // High Standard deviation
+
+We notice some potential outliers in the credit duration values as well mainly detected via IQR criterion in the boxplot: 
+
+```{r}
+# Create a boxplot using ggplot:
+ggplot(df) + aes(x = "", y = Duration.of.Credit..month.) + geom_boxplot(fill = "#0c4c8a") + theme_minimal()
+```
+
+Below are the outlier occurences for the credit duration:
+
+```{r}
+# extract the values of the potential outliers based on the IQR criterion
+boxplot.stats(df$Duration.of.Credit..month.)$out
+```
+
+And these are their respective rows in the data frame:
+
+```{r}
+# extract the row number corresponding to these outliers:
+out <- boxplot.stats(df$Duration.of.Credit..month.)$out
+out_ind <- which(df$Duration.of.Credit..month. %in% c(out))
+out_ind
+
+# View((df$Credit.Amount))
+
+
+# load library lattice
+#library(lattice)
+# create relative frequency histogram using lattice:
+#histogram(GermanCredit$Credit.Amount, col="blue", main="Number of observations by credit amount", xlab="Credit Amount", ylab="Percentage")
+
+# create a count histogram using ggplot:
+# df <- data.frame(GermanCredit)
+# ggplot(df, aes(x=Credit.Amount)) + geom_histogram(color="white", fill="red", bins = 10) + 
+#   scale_x_continuous(name = "Credit Amount", breaks = seq(0, 20000, 2500)) +
+#   ggtitle("Credit Amount Frequency")
+
+
+```
+
+
+
+	
+
+- The relative frequency by Account Balance shows that the majority of borrowers have no bank account or a negative account balance.
+
+```{r message=FALSE}
+# summary(df$Account.Balance)
+# create a bar chart for Account Balance:
+  GermanCredit %>%group_by(Account.Balance)%>%summarise(n=n())%>%
+	ggplot(aes(x=Account.Balance,y=n,fill=Account.Balance))+geom_bar(stat = "identity")+
+	ggtitle("Observations distribution by Account Balance")+theme_bw()+coord_flip()
+  
+``` 
+
+The Observations distribution by Value of Savings/Stocks shows most debtors having a savings/stocks value of less than < 100 DM. This is followed by debtors who have no savings or that the status of such is unknown.
+
+
+```{r message=FALSE}
+# summary(df$Account.Balance)
+# create a bar chart for Account Balance:
+  GermanCredit %>%group_by(Value.Savings.Stocks)%>%summarise(n=n())%>%
+	ggplot(aes(x=Value.Savings.Stocks,y=n,fill=Value.Savings.Stocks))+geom_bar(stat = "identity")+
+	ggtitle("Observations distribution by Value of Savings/Stocks")+theme_bw()+coord_flip()
+  
+
+```
+
+
+- The frequency by age shows that the majority of borrowers are in their mid twenties and early forties:
+
+```{r message=FALSE}
+
+# create a frequency distribution for this quantitative data (age variable)
+age <- GermanCredit$Age..years.
+#range(age) # 19 75 (75-19=56 - dividing by 8 intervals generates 7 groups)
+# Break the range into seven non-overlapping sub-intervals using the eight integer sequence as the break point
+breaks = seq(19, 75, by=8)    # eight integer sequence 
+#breaks # [1] 19 27 35 43 51 59 67 75
+# Classify the age obs according to the eight-unit-length sub-intervals with cut
+age.cut = cut(age, breaks, right=FALSE)#close intervals on the left (no increment)
+#age.cut
+# Compute the frequency of age in each sub-interval with the table function.
+age.freq = table(age.cut)
+#age.freq
+# print the result in column format:
+Age.Frequency <- cbind(age.freq)
+Age.Frequency
+# Now that we created class intervals for our quantative data,we can create a frequency distribution for it:
+barplot(age.freq)
+
+```
+
+- The most common purpose of credit is to purchase a television/radio followed by purchase of    new car then furniture then used car:
+
+```{r message=FALSE}
+GermanCredit %>%group_by(Purpose)%>%summarise(n=n())%>%
+	ggplot(aes(x=Purpose,y=n,fill=Purpose))+geom_bar(stat = "identity")+
+	ggtitle("Number of observations by Purpose")+theme_bw()
+
+```
+
+
+- The majority of borrowers have been duly paying their credits back so far(53%). Those with a  critical account constitutes the second largest portion (29.3%):
+
+```{r message=FALSE}
+GermanCredit %>%group_by(Payment.Status.of.Previous.Credit)%>%summarise(n=n())%>%
+	ggplot(aes(x=Payment.Status.of.Previous.Credit,y=n,fill=Payment.Status.of.Previous.Credit))+geom_bar(stat = "identity")+
+	ggtitle("Number of observations by Payment Status history")+theme_bw()+coord_flip()
+
+```
+
+
+- Between 1 year and less than 4 years is the most frequent length of current employment.
+  (33.9%), followed by those who are stable in their jobs for 7 years or more (25.3%). 
+  The unemployed are the smallest portion of applicants (6.2%):
+  
+```{r message=FALSE}
+GermanCredit %>%group_by(Length.of.current.employment)%>%summarise(n=n())%>%
+	ggplot(aes(x=Length.of.current.employment,y=n,fill=Length.of.current.employment))+geom_bar(stat = "identity")+
+	ggtitle("Observations by Lengh of Current Employment")+theme_bw()
+
+```
+  
+
+- Most of the applicants did not indicate any guarantor (90.7%). That could be explained by the   fact most of them are foreign workers (96.3%):
+
+```{r message=FALSE}
+GermanCredit %>%group_by(Guarantors)%>%summarise(n=n())%>%
+	ggplot(aes(x=Guarantors,y=n,fill=Guarantors))+geom_bar(stat = "identity")+
+	ggtitle("Number of observations by Guarantors")+theme_bw()
+
+```
+
+Foreign workers make the maojority of applicants:
+
+```{r message=FALSE}
+GermanCredit %>%group_by(Foreign.Worker)%>%summarise(n=n())%>%
+	ggplot(aes(x=Foreign.Worker,y=n,fill=Foreign.Worker))+geom_bar(stat = "identity")+
+	ggtitle("Number of observations by Foreign Worker")+theme_bw()
+
+```
+
+
+
+# BIVARIATE ANALYSIS
+
+On this section we are going to compare the Creditability score (status) in relation to some potential explanatory variables, 
+
+
+    - Applicants with higher credit amount tend to get bad creditability compared to those with
+      lesser amounts.
+   
+    - The duration of credit clearly correlates with creditability score. The longer the 
+      duration,  the bad the score is.
+      
+
+      
+    - The distribution by age shows that, in average, the Creditability score is negatively  
+      correlated (bad) among the younger group.
+      
+      Creditability seems to be highly correlated with the Value of Savings/Stocks as well. The lower the value of savings/stocks, the lower the creditability score (bad):
+
+
+
+
+
+- Correlation of Creditability with Credit Amount:
+
+```{r}
+# Correlation:
+
+
+cor(Creditability.score_int,Credit_Amount)
+```
+
+Note: Creditability was transformed into numerical (0 for Bad and 1 for Good)
+
+
+Correlation of Creditability with age:
+
+```{r}
+
+
+cor(Creditability.score_int,age)
+```
+
+Correlation of Creditability with Credit Duration:
+
+```{r}
+
+CreditDuration <- df$Duration.of.Credit..month.
+
+cor(Creditability.score_int,CreditDuration)
+```
+
+      
+
+```{r}
+
+
+ggplot(GermanCredit,aes(x=Credit.Amount, y=Creditability,fill=Credit.Amount))+geom_boxplot()+
+	ggtitle("Creditability Score Distribution by Credit Amount")+theme_bw()+coord_flip()
+
+ggplot(GermanCredit,aes(x=Duration.of.Credit..month., y=Creditability,fill=Duration.of.Credit..month.))+geom_boxplot()+
+	ggtitle("Creditability Distribution by Duration of Credit(months)")+theme_bw()+coord_flip()
+
+
+
+```
